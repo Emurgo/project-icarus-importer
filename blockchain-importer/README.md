@@ -27,7 +27,7 @@ stack exec cardano-importer-swagger
 
 ## Run it
 
-**Pre-requesites**: `sudo apt-get install liblzma-dev libpq-dev`
+**Pre-requesites**: `sudo apt-get install liblzma-dev libpq-dev librocksdb-dev libssl-dev`
 
 Run it from project root.
 

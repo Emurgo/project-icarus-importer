@@ -50,29 +50,22 @@ utxosTable = Table "utxos" (pUtxos UtxoRow  { urUtxoId = required "utxo_id"
                                             , urAmount = required "amount"
                                             })
 
-txId :: TxIn -> String
-txId (TxInUtxo txHash txIndex) = hashToString txHash ++ show txIndex
-txId _                         = ""
+----------------------------------------------------------------------------
+-- Getters and manipulation
+----------------------------------------------------------------------------
 
-toRecord :: TxIn -> TxOutAux -> Maybe UtxoRowPGW
-toRecord txIn@(TxInUtxo txHash txIndex) (TxOutAux (TxOut receiver value)) = Just $ row
-  where sHash     = hashToString txHash
-        iIndex    = fromIntegral txIndex
-        sAddress  = addressToString receiver
-        iAmount   = coinToInt64 value
-        row       = UtxoRow (pgString $ txId txIn)
-                            (pgString sHash) (pgInt4 iIndex)
-                            (pgString sAddress) (pgInt8 iAmount)
-toRecord _ _ = Nothing
+{-|
+    Applies a UtxoModifier to the UTxOs in the table
 
--- | Applies a UtxoModifier to the UTxOs in the table
+    Note: As this could involve large amounts of changes (as during
+    recovery), this is on batches of utxoOperationBatchSize changes
+-}
 applyModifierToUtxos :: UtxoModifier -> PGS.Connection -> IO ()
 applyModifierToUtxos modifier conn = do
-  let toInsert = catMaybes $ (uncurry toRecord) <$> MM.insertions modifier
-      toDelete = (pgString . txId) <$> MM.deletions modifier
-  void $ runUpsert_ conn utxosTable ["utxo_id"] [] toInsert
-  void $ runDelete_ conn $
-                    Delete utxosTable (\(UtxoRow sId _ _ _ _) -> in_ toDelete sId) rCount
+  traverse_ (applyInsertionsToUtxos conn) $
+            splitEvery utxoOperationBatchSize $ MM.insertions modifier
+  traverse_ (applyDeletionsToUtxos conn) $
+            splitEvery utxoOperationBatchSize $ MM.deletions modifier
 
 -- | Returns the utxo stored in the table
 getUtxos :: PGS.Connection -> IO [UtxoRecord]
@@ -90,3 +83,43 @@ getUtxos conn = do
 clearUtxos :: PGS.Connection -> IO ()
 clearUtxos conn = void $ runDelete_ conn $
                                     Delete utxosTable (const $ pgBool True) rCount
+
+
+----------------------------------------------------------------------------
+-- Helpers
+----------------------------------------------------------------------------
+
+txId :: TxIn -> String
+txId (TxInUtxo txHash txIndex) = hashToString txHash ++ show txIndex
+txId _                         = ""
+
+toRecord :: TxIn -> TxOutAux -> Maybe UtxoRowPGW
+toRecord txIn@(TxInUtxo txHash txIndex) (TxOutAux (TxOut receiver value)) = Just $ row
+  where sHash     = hashToString txHash
+        iIndex    = fromIntegral txIndex
+        sAddress  = addressToString receiver
+        iAmount   = coinToInt64 value
+        row       = UtxoRow (pgString $ txId txIn)
+                            (pgString sHash) (pgInt4 iIndex)
+                            (pgString sAddress) (pgInt8 iAmount)
+toRecord _ _ = Nothing
+
+-- Size of the batches of insertions/deletions done to the UTxO
+utxoOperationBatchSize :: Int
+utxoOperationBatchSize = 2000
+
+applyInsertionsToUtxos :: PGS.Connection -> [(TxIn, TxOutAux)] -> IO ()
+applyInsertionsToUtxos conn insertions = do
+  let toInsert = catMaybes $ (uncurry toRecord) <$> insertions
+  void $ runUpsert_ conn utxosTable ["utxo_id"] [] toInsert
+
+applyDeletionsToUtxos :: PGS.Connection -> [TxIn] -> IO ()
+applyDeletionsToUtxos conn deletions = do
+  let toDelete = (pgString . txId) <$> deletions
+  void $ runDelete_ conn $
+                    Delete utxosTable (\(UtxoRow sId _ _ _ _) -> in_ toDelete sId) rCount
+
+splitEvery :: Int -> [a] -> [[a]]
+splitEvery _ [] = []
+splitEvery n l = firstN : (splitEvery n restOfList)
+  where (firstN, restOfList) = splitAt n l

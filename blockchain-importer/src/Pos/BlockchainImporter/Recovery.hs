@@ -6,7 +6,6 @@ module Pos.BlockchainImporter.Recovery
 import           Universum
 
 import           Control.Lens (_Wrapped)
-import           Data.Map ((\\))
 import           Formatting (build, int, sformat, (%))
 import           JsonLog (CanJsonLog (..))
 import           System.Wlog (logInfo, logWarning)
@@ -25,7 +24,7 @@ import qualified Pos.DB.Block.Load as DB
 import qualified Pos.DB.BlockIndex as DB
 import           Pos.Ssc.Configuration (HasSscConfiguration)
 import           Pos.StateLock (Priority (..), StateLock, StateLockMetrics, withStateLock)
-import           Pos.Txp (Utxo, genesisUtxo, unGenesisUtxo, utxoToModifier)
+import           Pos.Txp (utxoToModifier)
 import           Pos.Txp.DB (getAllPotentiallyHugeUtxo)
 import           Pos.Util.Chrono (NewestFirst, _NewestFirst)
 import           Pos.Util.JsonLog.Events (MemPoolModifyReason (..))
@@ -128,7 +127,7 @@ rollbackPostgresDB rollbackTo = do
   liftIO $ postGreOperate $ BestBlockT.updateBestBlock rollbackTo
 
   liftIO $ postGreOperate $ UtxosT.clearUtxos
-  kvUtxos <- nonGenesisRocksUtxos
+  kvUtxos <- getAllPotentiallyHugeUtxo
   liftIO $ postGreOperate $ UtxosT.applyModifierToUtxos $ utxoToModifier kvUtxos
 
   logInfo $ sformat ("Rollbacked postgres db to block "%build) rollbackTo
@@ -148,12 +147,6 @@ blkNumberToRollback rocksBestBlock postgresBestBlock =
                                    else 0
   where latestCommonBlk = min rocksBestBlock postgresBestBlock
         maxRollback = fromIntegral blkSecurityParam
-
-nonGenesisRocksUtxos :: RecoveryMode ctx m => m Utxo
-nonGenesisRocksUtxos = do
-  allKVUtxos <- getAllPotentiallyHugeUtxo
-  let genesisUtxos = unGenesisUtxo genesisUtxo
-  pure $ allKVUtxos \\ genesisUtxos
 
 rocksDBTipDifficulty :: RecoveryMode ctx m => m BlockCount
 rocksDBTipDifficulty = getChainDifficulty . view difficultyL <$> DB.getTipHeader
