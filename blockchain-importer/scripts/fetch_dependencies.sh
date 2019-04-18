@@ -13,7 +13,7 @@ https://github.com/serokell/network-transport.git
 https://github.com/serokell/network-transport-tcp.git
 https://github.com/input-output-hk/cardano-crypto.git
 https://github.com/input-output-hk/cardano-report-server.git
-https://github.com/input-output-hk/plutus-prototype.git
+https://github.com/vantuz-subhuman/plutus.git
 https://github.com/serokell/engine.io.git
 https://github.com/input-output-hk/cardano-sl.git
 https://github.com/tomjaguarpaw/haskell-opaleye

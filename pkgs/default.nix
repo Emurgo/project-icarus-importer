@@ -6944,7 +6944,7 @@ inherit (pkgs) mesa;};
          , exceptions, extra, filelock, filepath, fmt, formatting
          , generic-arbitrary, hashable, hspec, lens, log-warper, mmorph
          , monad-control, mtl, neat-interpolation, network
-         , network-transport, optparse-applicative, parsec, plutus-prototype
+         , network-transport, optparse-applicative, parsec, plutus
          , pvss, QuickCheck, random, reflection, safe-exceptions, safecopy
          , serokell-util, servant, servant-client, servant-client-core
          , servant-server, servant-swagger, stdenv, stm, streaming-commons
@@ -6968,7 +6968,7 @@ inherit (pkgs) mesa;};
              data-default directory ed25519 ekg-core ether exceptions filelock
              filepath formatting generic-arbitrary hashable hspec lens
              log-warper mmorph monad-control mtl neat-interpolation network
-             network-transport optparse-applicative parsec plutus-prototype pvss
+             network-transport optparse-applicative parsec plutus pvss
              QuickCheck random reflection safe-exceptions safecopy serokell-util
              servant servant-client servant-client-core servant-server
              servant-swagger stm streaming-commons systemd tagged
@@ -7215,7 +7215,7 @@ inherit (pkgs) mesa;};
          , cardano-sl-util, cardano-sl-util-test, cborg, containers, cpphs
          , cryptonite, data-default, deepseq, deriving-compat, exceptions
          , extra, filepath, fmt, formatting, generic-arbitrary, hashable
-         , hspec, lens, log-warper, memory, mtl, plutus-prototype
+         , hspec, lens, log-warper, memory, mtl, plutus
          , QuickCheck, quickcheck-instances, random, reflection
          , safe-exceptions, serokell-util, stdenv, template-haskell, text
          , text-format, th-lift-instances, time, time-units, universum
@@ -7233,7 +7233,7 @@ inherit (pkgs) mesa;};
              cardano-sl-util-test cborg containers cryptonite data-default
              deepseq deriving-compat exceptions extra filepath fmt formatting
              generic-arbitrary hashable lens log-warper memory mtl
-             plutus-prototype QuickCheck quickcheck-instances random reflection
+             plutus QuickCheck quickcheck-instances random reflection
              safe-exceptions serokell-util template-haskell text text-format
              th-lift-instances time time-units universum unordered-containers
              vector
@@ -7678,7 +7678,7 @@ inherit (pkgs) mesa;};
          , cardano-sl-util, cardano-sl-util-test, conduit, containers, cpphs
          , data-default, ekg-core, ether, exceptions, fmt, formatting, free
          , generic-arbitrary, hashable, lens, log-warper, memory, mmorph
-         , mtl, neat-interpolation, plutus-prototype, QuickCheck, reflection
+         , mtl, neat-interpolation, plutus, QuickCheck, reflection
          , resourcet, rocksdb-haskell-ng, safe-exceptions, serokell-util
          , stdenv, stm, tagged, template-haskell, text, text-format
          , transformers, universum, unliftio, unordered-containers, vector
@@ -7694,7 +7694,7 @@ inherit (pkgs) mesa;};
              cardano-sl-infra cardano-sl-networking cardano-sl-util
              cardano-sl-util-test conduit containers data-default ekg-core ether
              exceptions fmt formatting free generic-arbitrary hashable lens
-             log-warper memory mmorph mtl neat-interpolation plutus-prototype
+             log-warper memory mmorph mtl neat-interpolation plutus
              QuickCheck reflection resourcet rocksdb-haskell-ng safe-exceptions
              serokell-util stm tagged template-haskell text text-format
              transformers universum unliftio unordered-containers vector
@@ -30288,16 +30288,16 @@ inherit (pkgs) which;};
            description = "A lightweight plotting library, exporting to SVG";
            license = stdenv.lib.licenses.bsd3;
          }) {};
-      "plutus-prototype" = callPackage
+      "plutus" = callPackage
         ({ mkDerivation, base, bifunctors, binary, bytestring
          , cardano-crypto, cryptonite, ed25519, either, fetchgit, filepath
          , lens, memory, mtl, operational, parsec, stdenv, transformers
          }:
          mkDerivation {
-           pname = "plutus-prototype";
+           pname = "plutus";
            version = "0.1.0.0";
            src = fetchgit {
-             url = "https://github.com/input-output-hk/plutus-prototype";
+             url = "https://github.com/vantuz-subhuman/plutus";
              sha256 = "1b0c9d8pr932fvaamyv53fa2jpfwm249imc8fxfybn71yz8p96ai";
              rev = "d4aa461fc69fc6957aab46b41a670c2144aefb77";
            };
