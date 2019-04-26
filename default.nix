@@ -135,6 +135,7 @@ let
       mainnetBlockchainImporter = connect { executable = "blockchain-importer"; };
       stagingWallet = connect { environment = "mainnet-staging"; };
       demoWallet = connect { environment = "demo"; };
+      testnet.wallet = connect { environment = "testnet"; };
       stagingExplorer = connect { executable = "explorer"; environment = "mainnet-staging"; };
       stagingBlockchainImporter = connect { executable = "blockchain-importer"; environment = "mainnet-staging"; };
     };

@@ -42,6 +42,8 @@ let
     connectScripts.stagingWallet             = [ "x86_64-linux" "x86_64-darwin" ];
     connectScripts.stagingExplorer           = [ "x86_64-linux" "x86_64-darwin" ];
     connectScripts.stagingBlockchainImporter = [ "x86_64-linux" "x86_64-darwin" ];
+    connectScripts.testnet.wallet   = [ "x86_64-linux" "x86_64-darwin" ];
+    connectScripts.testnet.explorer = [ "x86_64-linux" "x86_64-darwin" ];
     daedalus-bridge = supportedSystems;
   };
   nixosTests = import ./nixos-tests;
