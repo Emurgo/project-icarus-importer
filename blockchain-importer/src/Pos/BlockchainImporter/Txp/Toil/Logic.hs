@@ -19,13 +19,14 @@ import           Universum
 import           Control.Monad.Except (mapExceptT)
 import qualified Database.PostgreSQL.Simple as PGS
 
-import           Pos.BlockchainImporter.Configuration (HasPostGresDB, postGreOperate)
+import           Pos.BlockchainImporter.Configuration (HasPostGresDB, postGreOperate, withPostGreTransaction)
 import           Pos.BlockchainImporter.Core (TxExtra (..))
 import qualified Pos.BlockchainImporter.Tables.BestBlockTable as BBT
 import qualified Pos.BlockchainImporter.Tables.TxsTable as TxsT
 import qualified Pos.BlockchainImporter.Tables.UtxosTable as UT
 import           Pos.BlockchainImporter.Txp.Toil.Monad (EGlobalToilM, ELocalToilM)
-import           Pos.Core (BlockCount, BlockVersionData, EpochIndex, HasConfiguration, Timestamp, HeaderHash)
+import           Pos.Core (BlockCount, BlockVersionData, EpochIndex,
+                           HasConfiguration, Timestamp, HeaderHash, SlotId)
 import           Pos.Core.Txp (Tx (..), TxAux (..), TxId, TxIn (..), TxOutAux (..), TxUndo)
 import           Pos.Crypto (WithHash (..), hash)
 import           Pos.DB.Class (MonadDBRead)
@@ -48,12 +49,13 @@ eApplyToil ::
     => IsNewEpochOperation    -- Whether apply resulted from new epoch operation
     -> Maybe Timestamp        -- Timestamp of the block
     -> [(TxAux, TxUndo)]      -- Txs of the block
+    -> SlotId
     -> Maybe BlockCount       -- Number of the block, if it's not a genesis
     -> HeaderHash
     -> m (EGlobalToilM ())
-eApplyToil isNewEpoch mTxTimestamp txun maybeBlockHeight headerHash = do
+eApplyToil isNewEpoch mTxTimestamp txun slot maybeBlockHeight headerHash = do
     -- Genesis block changes don't impact postgresdb
-    whenJust maybeBlockHeight $ eApplyToilPG isNewEpoch mTxTimestamp txun headerHash
+    whenJust maybeBlockHeight $ eApplyToilPG isNewEpoch mTxTimestamp txun slot headerHash
     pure $ extendGlobalToilM $ Txp.applyToil txun
 
 eApplyToilPG ::
@@ -61,10 +63,11 @@ eApplyToilPG ::
   => IsNewEpochOperation
   -> Maybe Timestamp
   -> [(TxAux, TxUndo)]
+  -> SlotId
   -> HeaderHash
   -> BlockCount
   -> m ()
-eApplyToilPG isNewEpoch mTxTimestamp txun headerHash blockHeight = do
+eApplyToilPG isNewEpoch mTxTimestamp txun slot headerHash blockHeight = do
     -- Update best block
     postgresStoreOnBlockEvent isNewEpoch $
                               BBT.updateBestBlock blockHeight
@@ -74,15 +77,16 @@ eApplyToilPG isNewEpoch mTxTimestamp txun headerHash blockHeight = do
                               UT.applyModifierToUtxos $ applyUTxOModifier txun
 
     -- Update tx history
-    mapM_ applier txun
+    mapM_ applier $ zip [0..] txun
   where
-    applier :: (TxAux, TxUndo) -> m ()
-    applier (txAux, txUndo) = do
+    applier :: (Int, (TxAux, TxUndo)) -> m ()
+    applier (ordinal, (txAux, txUndo)) = do
         let tx = taTx txAux
             newExtra = TxExtra mTxTimestamp txUndo
-
+        let blockData = TxsT.TxBlockData {
+          slot = slot, blockHeight = blockHeight, blockHash = headerHash, txOrdinal = ordinal}
         postgresStoreOnBlockEvent isNewEpoch $
-                                  TxsT.upsertSuccessfulTx tx newExtra (blockHeight, headerHash)
+                                  TxsT.upsertSuccessfulTx tx newExtra blockData
 
 
 -- | Rollback transactions from one block or genesis.
@@ -166,10 +170,10 @@ eNormalizeToil bvd curEpoch txs = catMaybes <$> mapM normalize ordered
     during it's processing. In that case, we attempt to obtain the inputs, returning them only
     if we successfully get all of them
 -}
-eFailedToil :: (MonadIO m, MonadDBRead m, HasPostGresDB) => Tx -> m ()
-eFailedToil tx = do
+eFailedToil :: (MonadIO m, MonadDBRead m, HasPostGresDB) => Maybe SlotId -> Tx -> m ()
+eFailedToil maybeSlot tx = do
   inputs <- fetchTxSenders tx
-  liftIO $ postGreOperate $ TxsT.upsertFailedTx tx inputs
+  liftIO $ withPostGreTransaction . postGreOperate $ TxsT.upsertFailedTx maybeSlot tx inputs
 
 -- | Checks if a tx was successful
 eCheckSuccessfulToil :: (MonadIO m, MonadDBRead m, HasPostGresDB) => Tx -> m Bool

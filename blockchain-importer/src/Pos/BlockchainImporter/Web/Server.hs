@@ -32,6 +32,7 @@ import           Servant.Generic (AsServerT, toServant)
 import           Servant.Server (Server, ServerT, serve)
 
 import           Pos.Crypto (hash)
+import           Pos.Slotting (MonadSlots (getCurrentSlot))
 
 import           Pos.Diffusion.Types (Diffusion (..))
 
@@ -145,7 +146,8 @@ handleSendSTxError txAux sendErr = do
   -- Invalid sent txs should only be inserted to the db if they were not duplicated
   withPostGreTransactionM $ do
     shouldUpsert <- not <$> eCheckSuccessfulToil tx
-    when shouldUpsert $ eFailedToil tx
+    maybeSlot <- getCurrentSlot
+    when shouldUpsert $ eFailedToil maybeSlot tx
   let txHash = hash tx
   throwM $ sendSTxFailureToBIError txHash sendErr
 

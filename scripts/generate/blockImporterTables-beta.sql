@@ -1,3 +1,6 @@
+-- Types
+CREATE DOMAIN posint AS int check (value >= 0);
+
 -- Tables
 CREATE TABLE utxos  ( utxo_id   text      PRIMARY KEY
                     , tx_hash   text
@@ -15,6 +18,9 @@ CREATE TABLE txs 	( hash		          text      PRIMARY KEY
                   , outputs_amount    bigint[]
         					, block_num         bigint    NULL
                   , block_hash        text      NULL
+                  , epoch             posint    NULL
+                  , slot              posint    NULL
+                  , ordinal           posint    NULL
         					, time              timestamp with time zone NULL
                   , tx_state          text      DEFAULT true
                   , last_update       timestamp with time zone
@@ -30,5 +36,7 @@ CREATE TABLE tx_addresses ( tx_hash  text     REFERENCES txs ON DELETE CASCADE
 CREATE INDEX ON utxos (receiver);
 CREATE INDEX ON txs (hash);
 CREATE INDEX ON txs (hash, last_update);
+CREATE INDEX ON txs (epoch, slot);
+CREATE INDEX ON txs (epoch, slot, ordinal);
 CREATE INDEX ON tx_addresses (tx_hash);
 CREATE INDEX ON tx_addresses (address);

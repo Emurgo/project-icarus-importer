@@ -88,7 +88,8 @@ eTxNormalize = withPostGreTransactionM $ do
     extras <- MM.insertionsMap . view eemLocalTxsExtra <$> withTxpLocalData getTxpExtra
     invalidTxs <- txNormalizeAbstract buildEmptyContext (normalizeToil' extras)
     -- Invalid txs previously were in Pending state, so they are updated to the db
-    whenJust invalidTxs $ mapM_ (eFailedToil . taTx)
+    maybeSlot <- getCurrentSlot
+    whenJust invalidTxs $ mapM_ ((eFailedToil maybeSlot) . taTx)
   where
     buildEmptyContext :: Utxo -> [TxAux] -> m ()
     buildEmptyContext _ _ = pure ()
